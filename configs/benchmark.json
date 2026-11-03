@@ -1,0 +1,13 @@
+{
+  "title": "Bilinear CNNs for Fine-grained Visual Recognition",
+  "authors": "Tsung-Yu Lin, Aruni RoyChowdhury, Subhransu Maji",
+  "version": "arXiv:1504.07889v6, 2017",
+  "url": "https://arxiv.org/abs/1504.07889",
+  "table": "Table 2, fine-tuned VGG-M + VGG-D B-CNN",
+  "dataset": "CUB-200-2011",
+  "split": "official test",
+  "metric": "per-image top-1 accuracy (%)",
+  "top1": 84.1,
+  "annotations": "image labels only; no boxes or part labels",
+  "protocol": "ImageNet-pretrained bilinear features; domain fine-tuning; different feature pooling, resolution and prediction protocol from our single-crop ResNet."
+}
