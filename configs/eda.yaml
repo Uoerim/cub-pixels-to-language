@@ -2,3 +2,5 @@ task: classification
 num_classes: 200
 save_dir: outputs
 cache_dir: .cache/huggingface/datasets
+train_revision: bd3988995e6db193427255abdebd522afe24ce76
+test_revision: 82447a42c5e05c7fe21cd36accfdf399148e8668

@@ -73,9 +73,9 @@ def load_records(config, train_data=None, test_data=None):
     cache_dir = config.get("cache_dir")
     local = config.get("dataset_dir")
     if train_data is None:
-        train_data = load_from_disk(str(Path(local) / "train")) if local else load_dataset("Multimodal-Fatima/CUB_train", split="train", cache_dir=cache_dir)
+        train_data = load_from_disk(str(Path(local) / "train")) if local else load_dataset("Multimodal-Fatima/CUB_train", split="train", cache_dir=cache_dir, revision=config.get("train_revision"))
     if test_data is None:
-        test_data = load_from_disk(str(Path(local) / "test")) if local else load_dataset("Multimodal-Fatima/CUB_test", split="test", cache_dir=cache_dir)
+        test_data = load_from_disk(str(Path(local) / "test")) if local else load_dataset("Multimodal-Fatima/CUB_test", split="test", cache_dir=cache_dir, revision=config.get("test_revision"))
     return train_data, test_data
 
 
