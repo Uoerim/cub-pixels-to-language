@@ -1,0 +1,4 @@
+task: classification
+num_classes: 200
+save_dir: outputs
+cache_dir: .cache/huggingface/datasets
