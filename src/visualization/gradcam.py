@@ -90,6 +90,8 @@ def overlay_heatmap(image, heatmap, alpha=0.4):
 def save_gradcam_examples(model, loader, output_dir="outputs/gradcam", num_samples=8, class_names=None, max_scan_samples=None):
     if num_samples < 1:
         raise ValueError("num_samples must be positive.")
+    if max_scan_samples is not None and max_scan_samples < 1:
+        raise ValueError("max_scan_samples must be positive.")
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     names = list(class_names or getattr(loader.dataset, "class_names", []))
