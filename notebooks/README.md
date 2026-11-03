@@ -1,1 +1,0 @@
-Exploratory notebooks may be stored here. Final EDA is implemented in `src/data/eda.py` and runs with `python -m src.cli eda --config configs/eda.yaml`. The submission does not depend on a notebook runtime or saved notebook state.
