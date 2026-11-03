@@ -6,6 +6,7 @@ from pathlib import Path
 
 import numpy as np
 from PIL import ImageOps
+from tqdm.auto import tqdm
 
 from src.data.preprocess import caption_anomalies
 
@@ -27,8 +28,9 @@ def analyze_records(records, split, output_dir, num_classes=200):
     seen = {"id": {}, "file_name": {}, "pixels": {}}
     duplicates, invalid, keep, rows, image_keys = [], [], [], [], []
     sample_images = []
+    sample_indices = set(np.linspace(0, max(0, len(records) - 1), min(8, len(records)), dtype=int).tolist())
     with (output_dir / f"captions_{split}.jsonl").open("w", encoding="utf-8") as cleaned:
-        for index in range(len(records)):
+        for index in tqdm(range(len(records)), desc=f"Audit {split}"):
             try:
                 row = records[index]
                 label = int(row["label"])
@@ -71,7 +73,7 @@ def analyze_records(records, split, output_dir, num_classes=200):
                         seen[key][value] = (index, label)
                 if not duplicate_pixel:
                     keep.append(index)
-                if len(sample_images) < 8:
+                if index in sample_indices:
                     sample_images.append((image.copy(), label, captions[0] if captions else "Missing caption"))
                 rows.append({"index": index, "label": label, "width": image.width, "height": image.height, "aspect_ratio": ratios[-1], "captions": len(captions)})
             except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
@@ -128,7 +130,9 @@ def eda_command(args):
     from src.cli import load_config
 
     result = run_eda(load_config(args.config))
-    print(json.dumps(result, indent=2))
+    summary = {key: value for key, value in result.items() if key != "train_keep_indices"}
+    summary["training_records_kept"] = len(result["train_keep_indices"])
+    print(json.dumps(summary, indent=2))
     return result
 
 

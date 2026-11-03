@@ -1,4 +1,5 @@
 from pathlib import Path
+from textwrap import fill
 
 import matplotlib
 
@@ -31,7 +32,7 @@ def save_eda_plots(report, widths, heights, ratios, lengths, caption_counts, sam
         for axis, (image, label, caption) in zip(axes.flat, samples):
             axis.imshow(image)
             axis.set_title(f"Species {label}", fontsize=10)
-            axis.text(0.5, -0.03, caption, transform=axis.transAxes, ha="center", va="top", wrap=True, fontsize=8)
+            axis.text(0.5, -0.03, fill(caption, 38), transform=axis.transAxes, ha="center", va="top", fontsize=8)
         figure.tight_layout(h_pad=4)
         figure.savefig(output_dir / f"samples_{split}.png", dpi=160, bbox_inches="tight")
         plt.close(figure)
