@@ -110,7 +110,7 @@ python -m pip check
 
 Tests use tiny local fixtures for portability, including subprocess `train`, `predict`, `evaluate`, and `gradcam` commands, actual MLflow persistence, transfer feature/freezing behavior, checkpoint round trips, text anomalies, duplicate/corruption handling, metric arithmetic and both search methods. Fixture scores are verification evidence only. Real experiment results must come from the official dataset commands above.
 
-Repository: [Uoerim/cub-pixels-to-language](https://github.com/Uoerim/cub-pixels-to-language). Keep generated figures, logs and weights under ignored `outputs/`. The team leader handles the trained-model Drive link, team number and final submission archive. The repository README retains its original task ownership sections. Full-data measurements and cleaning decisions are documented in [data_findings.md](data_findings.md).
+Repository: [Uoerim/cub-pixels-to-language](https://github.com/Uoerim/cub-pixels-to-language). Keep generated figures, logs and weights under ignored `outputs/`. The team leader handles the trained-model Drive link, team number and final submission archive. The repository README includes setup and run commands alongside the original task ownership sections. Full-data measurements and cleaning decisions are documented in [data_findings.md](data_findings.md).
 
 ## Measured runs: 2026-11-03
 

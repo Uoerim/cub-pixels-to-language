@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .venv/
 outputs/
+artifacts/
 mlruns/
 wandb/
 *.pth
