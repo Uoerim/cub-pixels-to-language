@@ -32,6 +32,8 @@ def load_model_checkpoint(path, config=None, device_name=None):
         if key in config and key in saved_config and config[key] != saved_config[key]:
             raise ValueError(f"Configuration '{key}' differs from the saved checkpoint.")
     effective_config = {**saved_config, **config}
+    if effective_config.get("num_threads"):
+        torch.set_num_threads(effective_config["num_threads"])
     device = resolve_device(device_name or effective_config.get("device", "auto"))
     model = build_model(effective_config, for_inference=True)
     model.load_state_dict(checkpoint["model_state_dict"])

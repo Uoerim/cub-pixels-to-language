@@ -33,6 +33,8 @@ def trial_parameters(space, method, trials, seed):
 
 
 def run_search(config, space, method="both", trials=4, train_data=None, test_data=None):
+    if config.get("num_threads"):
+        torch.set_num_threads(config["num_threads"])
     methods = ["grid", "random"] if method == "both" else [method]
     plans = {name: trial_parameters(space, name, trials, config.get("seed", 42)) for name in methods}
     output = Path(config.get("save_dir", "outputs")) / "tuning"
