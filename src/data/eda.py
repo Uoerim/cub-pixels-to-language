@@ -115,6 +115,7 @@ def run_eda(config, train_data=None, test_data=None):
     fingerprint = getattr(train_data, "_fingerprint", None)
     manifest = {
         "train_fingerprint": fingerprint, "train_records": len(train_data), "test_records": len(test_data),
+        "test_fingerprint": getattr(test_data, "_fingerprint", None),
         "train_keep_indices": [index for index in train["keep_indices"] if index not in set(overlaps)],
         "train_test_overlap_indices": overlaps, "test_invalid_records": test["invalid_records"],
         "conflicting_labels": [row for row in train["duplicates"] if row["kind"] == "pixels" and row["conflicting_label"]],

@@ -43,3 +43,20 @@ class DataAuditTests(unittest.TestCase):
             self.assertEqual(result["train_keep_indices"], [])
             self.assertEqual(result["test_records"], 1)
             self.assertEqual(json.loads((Path(directory) / "eda" / "cleaning_manifest.json").read_text()), result)
+
+    def test_cleaning_manifest_prevents_stale_data_and_split_leakage(self):
+        from src.data import build_dataloaders
+        from tests.test_pipeline import make_records
+
+        train, test = make_records(), make_records(4)
+        with tempfile.TemporaryDirectory() as directory:
+            config = {"save_dir": directory, "num_classes": 2, "val_split": 0.25, "img_size": 64}
+            manifest = run_eda(config, train, test)
+            config["data_manifest"] = str(Path(directory) / "eda" / "cleaning_manifest.json")
+            loaders = build_dataloaders(config, train, test)
+            selected = set(loaders["train"].dataset.indices) | set(loaders["val"].dataset.indices)
+            self.assertEqual(selected, set(manifest["train_keep_indices"]))
+            self.assertFalse(selected & set(manifest["train_test_overlap_indices"]))
+            self.assertEqual(len(loaders["test"].dataset), 4)
+            with self.assertRaisesRegex(ValueError, "does not match"):
+                build_dataloaders(config, train, test.select([3, 2, 1, 0]))

@@ -11,8 +11,10 @@ val_split: 0.15
 seed: 42
 num_workers: 0
 device: auto
-save_dir: outputs
-cache_dir: .cache/huggingface
+save_dir: outputs/scratch
+cache_dir: .cache/huggingface/datasets
+data_manifest: outputs/eda/cleaning_manifest.json
 mlflow: true
+mlflow_required: true
 mlflow_experiment: cub-classification
 mlflow_tracking_uri: sqlite:///outputs/mlflow.db

@@ -81,6 +81,10 @@ def load_records(config, train_data=None, test_data=None):
 
 def build_dataloaders(config, train_data=None, test_data=None):
     train_data, test_data = load_records(config, train_data, test_data)
+    train_names = getattr(getattr(train_data, "features", {}).get("label"), "names", None)
+    test_names = getattr(getattr(test_data, "features", {}).get("label"), "names", None)
+    if train_names and test_names and train_names != test_names:
+        raise ValueError("Train and test class mappings differ.")
     labels = np.asarray(train_data["label"])
     num_classes = config.get("num_classes", 200)
     for values in (labels, np.asarray(test_data["label"])):
@@ -92,7 +96,10 @@ def build_dataloaders(config, train_data=None, test_data=None):
     indices = np.arange(len(labels))
     if config.get("data_manifest"):
         manifest = json.loads(Path(config["data_manifest"]).read_text(encoding="utf-8"))
-        if manifest["train_records"] != len(train_data) or manifest["test_records"] != len(test_data) or manifest["train_fingerprint"] != getattr(train_data, "_fingerprint", None):
+        required = {"train_records", "test_records", "train_fingerprint", "test_fingerprint", "test_invalid_records", "conflicting_labels", "train_keep_indices"}
+        if not isinstance(manifest, dict) or not required.issubset(manifest):
+            raise ValueError("Invalid cleaning manifest; rerun EDA.")
+        if manifest["train_records"] != len(train_data) or manifest["test_records"] != len(test_data) or manifest["train_fingerprint"] != getattr(train_data, "_fingerprint", None) or manifest["test_fingerprint"] != getattr(test_data, "_fingerprint", None):
             raise ValueError("Cleaning manifest does not match this dataset; rerun EDA.")
         if manifest["test_invalid_records"] or manifest["conflicting_labels"]:
             raise ValueError("Review invalid test records or conflicting training labels before training.")
