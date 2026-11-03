@@ -1,0 +1,22 @@
+task: classification
+model_type: transfer
+model_module: src.models.transfer_cnn
+model_class: TransferCNN
+model_kwargs:
+  pretrained: true
+batch_size: 32
+lr: 0.0001
+weight_decay: 0.0001
+epochs: 30
+img_size: 224
+num_classes: 200
+dropout: 0.5
+val_split: 0.15
+seed: 42
+num_workers: 0
+device: auto
+save_dir: outputs
+cache_dir: .cache/huggingface
+mlflow: true
+mlflow_experiment: cub-classification
+mlflow_tracking_uri: sqlite:///outputs/mlflow.db
