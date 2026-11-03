@@ -233,8 +233,8 @@ class PipelineTests(unittest.TestCase):
         extension.register_commands = lambda parsers: parsers.add_parser("tune")
         with patch.dict(sys.modules, {"src.training.tuning": extension}):
             self.assertEqual(build_parser().parse_args(["tune"]).command, "tune")
-        with self.assertRaisesRegex(ValueError, "transfer_cnn"):
-            build_model({**self.config, "model_type": "transfer"})
+        with self.assertRaisesRegex(ValueError, "missing_cnn"):
+            build_model({**self.config, "model_type": "missing"})
 
     def test_python_has_no_comments_or_docstrings(self):
         root = Path(__file__).resolve().parents[1]
