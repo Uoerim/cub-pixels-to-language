@@ -32,6 +32,8 @@ def load_model_checkpoint(path, config=None, device_name=None):
         if key in config and key in saved_config and config[key] != saved_config[key]:
             raise ValueError(f"Configuration '{key}' differs from the saved checkpoint.")
     effective_config = {**saved_config, **config}
+    if effective_config.get("num_threads"):
+        torch.set_num_threads(effective_config["num_threads"])
     device = resolve_device(device_name or effective_config.get("device", "auto"))
     model = build_model(effective_config, for_inference=True)
     model.load_state_dict(checkpoint["model_state_dict"])
@@ -40,12 +42,16 @@ def load_model_checkpoint(path, config=None, device_name=None):
 
 
 def train_command(args):
+    import torch
+
     from src.data import build_dataloaders
     from src.models import build_model
     from src.training import Trainer, seed_everything
     from src.visualization.plots import save_augmented_samples, save_training_curves
 
     config = load_config(args.config)
+    if config.get("num_threads"):
+        torch.set_num_threads(config["num_threads"])
     if args.device is not None:
         config["device"] = args.device
     if args.epochs is not None:
@@ -107,7 +113,7 @@ def gradcam_command(args):
 
 
 def register_extension_commands(subparsers):
-    for module_name in ("src.training.tuning", "src.evaluation.metrics"):
+    for module_name in ("src.data.eda", "src.training.tuning", "src.evaluation.metrics"):
         try:
             module = import_module(module_name)
         except ModuleNotFoundError as error:

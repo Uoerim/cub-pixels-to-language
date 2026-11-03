@@ -1,0 +1,30 @@
+task: classification
+model_type: transfer
+model_module: src.models.transfer_cnn
+model_class: TransferCNN
+model_kwargs:
+  pretrained: true
+  backbone: resnet18
+  freeze_backbone: false
+batch_size: 32
+lr: 0.0003
+weight_decay: 0.0001
+epochs: 5
+img_size: 224
+num_classes: 200
+dropout: 0.5
+val_split: 0.15
+seed: 42
+num_workers: 0
+num_threads: 4
+device: auto
+save_dir: outputs/transfer_tuned
+cache_dir: .cache/huggingface/datasets
+train_revision: bd3988995e6db193427255abdebd522afe24ce76
+test_revision: 82447a42c5e05c7fe21cd36accfdf399148e8668
+data_manifest: outputs/eda/cleaning_manifest.json
+mlflow: true
+mlflow_required: true
+mlflow_experiment: cub-classification
+mlflow_tracking_uri: sqlite:///outputs/mlflow.db
+run_name: transfer_tuned

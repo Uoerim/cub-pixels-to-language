@@ -1,12 +1,16 @@
 import random
-import re
+import json
+from pathlib import Path
 
 import numpy as np
 import torch
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
+from PIL import ImageOps
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
+
+from src.data.preprocess import preprocess_captions
 
 
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
@@ -26,19 +30,14 @@ class CUBDataset(Dataset):
 
     def __getitem__(self, index):
         row = self.records[self.indices[index]]
-        image = row["image"].convert("RGB")
+        image = ImageOps.exif_transpose(row["image"]).convert("RGB")
         if self.transform is not None:
             image = self.transform(image)
         return image, int(row["label"])
 
     @staticmethod
     def preprocess_captions(description):
-        captions = []
-        for line in (description or "").split("\n"):
-            caption = re.sub(r"[\W_]+", " ", line.lower()).strip()
-            if caption:
-                captions.append(caption)
-        return captions
+        return preprocess_captions(description)
 
     def captions(self, index):
         row = self.records[self.indices[index]]
@@ -48,10 +47,10 @@ class CUBDataset(Dataset):
 def build_transforms(img_size=224):
     normalize = transforms.Normalize(IMAGENET_MEAN, IMAGENET_STD)
     train = transforms.Compose([
-        transforms.RandomResizedCrop(img_size),
+        transforms.RandomResizedCrop(img_size, scale=(0.65, 1.0), ratio=(0.8, 1.25)),
         transforms.RandomHorizontalFlip(),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-        transforms.RandomRotation(15),
+        transforms.ColorJitter(brightness=0.15, contrast=0.15, saturation=0.1, hue=0.02),
+        transforms.RandomRotation(10),
         transforms.ToTensor(),
         normalize,
     ])
@@ -70,12 +69,22 @@ def seed_worker(worker_id):
     random.seed(seed)
 
 
-def build_dataloaders(config, train_data=None, test_data=None):
+def load_records(config, train_data=None, test_data=None):
     cache_dir = config.get("cache_dir")
+    local = config.get("dataset_dir")
     if train_data is None:
-        train_data = load_dataset("Multimodal-Fatima/CUB_train", split="train", cache_dir=cache_dir)
+        train_data = load_from_disk(str(Path(local) / "train")) if local else load_dataset("Multimodal-Fatima/CUB_train", split="train", cache_dir=cache_dir, revision=config.get("train_revision"))
     if test_data is None:
-        test_data = load_dataset("Multimodal-Fatima/CUB_test", split="test", cache_dir=cache_dir)
+        test_data = load_from_disk(str(Path(local) / "test")) if local else load_dataset("Multimodal-Fatima/CUB_test", split="test", cache_dir=cache_dir, revision=config.get("test_revision"))
+    return train_data, test_data
+
+
+def build_dataloaders(config, train_data=None, test_data=None):
+    train_data, test_data = load_records(config, train_data, test_data)
+    train_names = getattr(getattr(train_data, "features", {}).get("label"), "names", None)
+    test_names = getattr(getattr(test_data, "features", {}).get("label"), "names", None)
+    if train_names and test_names and train_names != test_names:
+        raise ValueError("Train and test class mappings differ.")
     labels = np.asarray(train_data["label"])
     num_classes = config.get("num_classes", 200)
     for values in (labels, np.asarray(test_data["label"])):
@@ -84,11 +93,24 @@ def build_dataloaders(config, train_data=None, test_data=None):
     val_split = config.get("val_split", 0.15)
     if not 0 < val_split < 1:
         raise ValueError("val_split must be between 0 and 1.")
+    indices = np.arange(len(labels))
+    if config.get("data_manifest"):
+        manifest = json.loads(Path(config["data_manifest"]).read_text(encoding="utf-8"))
+        required = {"train_records", "test_records", "train_fingerprint", "test_fingerprint", "test_invalid_records", "conflicting_labels", "train_keep_indices"}
+        if not isinstance(manifest, dict) or not required.issubset(manifest):
+            raise ValueError("Invalid cleaning manifest; rerun EDA.")
+        if manifest["train_records"] != len(train_data) or manifest["test_records"] != len(test_data) or manifest["train_fingerprint"] != getattr(train_data, "_fingerprint", None) or manifest["test_fingerprint"] != getattr(test_data, "_fingerprint", None):
+            raise ValueError("Cleaning manifest does not match this dataset; rerun EDA.")
+        if manifest["test_invalid_records"] or manifest["conflicting_labels"]:
+            raise ValueError("Review invalid test records or conflicting training labels before training.")
+        indices = np.asarray(manifest["train_keep_indices"], dtype=int)
+        if len(indices) == 0 or len(set(indices.tolist())) != len(indices) or indices.min() < 0 or indices.max() >= len(labels):
+            raise ValueError("Invalid training indices in cleaning manifest.")
     train_indices, val_indices = train_test_split(
-        np.arange(len(labels)),
+        indices,
         test_size=val_split,
         random_state=config.get("seed", 42),
-        stratify=labels,
+        stratify=labels[indices],
     )
     train_transform, test_transform = build_transforms(config.get("img_size", 224))
     datasets = {
