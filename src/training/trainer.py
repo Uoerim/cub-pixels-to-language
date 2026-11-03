@@ -1,4 +1,5 @@
 import csv
+import hashlib
 import json
 import math
 import random
@@ -54,6 +55,8 @@ class ExperimentTracker:
         self.run_id = None
         self.history = []
         self.config_path = self.log_dir / "config.json"
+        if (self.log_dir / "history.json").exists():
+            raise ValueError("This run already has a history; choose a new save_dir to preserve it.")
         self.config_path.write_text(json.dumps(config, indent=2), encoding="utf-8")
 
     def start(self):
@@ -75,6 +78,7 @@ class ExperimentTracker:
             )
             self.mlflow = mlflow
             self.run_id = run.info.run_id
+            (self.log_dir / "run.json").write_text(json.dumps({"run_id": self.run_id, "tracking_uri": mlflow.get_tracking_uri()}, indent=2), encoding="utf-8")
             mlflow.log_params(flatten_config(self.config))
         except Exception as error:
             self._disable(error)
@@ -82,6 +86,8 @@ class ExperimentTracker:
     def _disable(self, error):
         warnings.warn(f"MLflow unavailable; JSON/CSV logging remains active: {error}", RuntimeWarning)
         self.close("FAILED")
+        if self.config.get("mlflow_required", False):
+            raise RuntimeError("Required experiment tracking failed.") from error
 
     def log_epoch(self, row):
         self.history.append(dict(row))
@@ -191,6 +197,7 @@ class Trainer:
             "config": self.config,
             "class_names": self.class_names,
             "history": self.history,
+            "mlflow_run_id": self.tracker.run_id,
         }
         names = [f"latest_{self.model_type}.pth"]
         if is_best:
@@ -201,7 +208,20 @@ class Trainer:
             torch.save(state, temporary)
             temporary.replace(path)
 
+    def _log_checkpoint_references(self):
+        references = []
+        for path in sorted(self.checkpoint_dir.glob(f"*_{self.model_type}.pth")):
+            digest = hashlib.sha256()
+            with path.open("rb") as handle:
+                for block in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(block)
+            references.append({"path": str(path.resolve()), "sha256": digest.hexdigest(), "bytes": path.stat().st_size})
+        payload = {"run_id": self.tracker.run_id, "checkpoints": references}
+        (self.tracker.log_dir / "checkpoints.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
     def fit(self, train_loader, val_loader):
+        if (self.tracker.log_dir / "history.json").exists():
+            raise ValueError("This run already has a history; choose a new save_dir to preserve it.")
         self.tracker.start()
         status = "FAILED"
         try:
@@ -221,6 +241,10 @@ class Trainer:
                 for callback in self.callbacks:
                     callback(self, row)
                 print(f"Epoch {epoch}: train loss {row['train_loss']:.4f}, val loss {row['val_loss']:.4f}, val top-1 {row['val_top1']:.2f}%, top-5 {row['val_top5']:.2f}%")
+            from src.visualization.plots import save_training_curves
+
+            save_training_curves(self.history, self.tracker.log_dir / "figures", self.model_type)
+            self._log_checkpoint_references()
             self.tracker.log_artifacts()
             status = "FINISHED"
             return self.history
