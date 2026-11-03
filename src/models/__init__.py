@@ -30,7 +30,7 @@ def build_model(config, for_inference=False):
     kwargs = dict(config.get("model_kwargs") or {})
     kwargs.setdefault("num_classes", config.get("num_classes", 200))
     kwargs.setdefault("dropout", config.get("dropout", 0.5))
-    if for_inference and "pretrained" in kwargs:
+    if for_inference and (model_type == "transfer" or "pretrained" in kwargs):
         kwargs["pretrained"] = False
     return constructor(**kwargs)
 

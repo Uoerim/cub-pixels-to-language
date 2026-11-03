@@ -45,12 +45,14 @@ class MilestoneTests(unittest.TestCase):
             self.assertTrue(torch.isfinite(maps).all())
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "model.pth"
-            torch.save({"config": {**config, "model_kwargs": {"pretrained": True, "freeze_backbone": True}}, "model_state_dict": model.state_dict()}, path)
-            with patch("torchvision.models.resnet18", wraps=__import__("torchvision").models.resnet18) as constructor:
-                restored, _, _ = load_model_checkpoint(path, device_name="cpu")
-                self.assertIsNone(constructor.call_args.kwargs["weights"])
-            with torch.no_grad():
-                torch.testing.assert_close(model(images), restored(images))
+            configurations = [{**config, "model_kwargs": {"pretrained": True, "freeze_backbone": True}}, {key: value for key, value in config.items() if key != "model_kwargs"}]
+            for saved in configurations:
+                torch.save({"config": saved, "model_state_dict": model.state_dict()}, path)
+                with patch("torchvision.models.resnet18", wraps=__import__("torchvision").models.resnet18) as constructor:
+                    restored, _, _ = load_model_checkpoint(path, device_name="cpu")
+                    self.assertIsNone(constructor.call_args.kwargs["weights"])
+                with torch.no_grad():
+                    torch.testing.assert_close(model(images), restored(images))
         with self.assertRaisesRegex(ValueError, "Unsupported backbone"):
             TransferCNN(backbone="unknown", pretrained=False)
 
